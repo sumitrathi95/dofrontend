@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auth Portal</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f4f6f9;
+      color: #1f2937;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #f3f4f6;
+      color: #374151;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .field { margin-bottom: 14px; }
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+    button.submit-btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    button.submit-btn:hover { background: #1d4ed8; }
+    button.logout-btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      background: #dc2626;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    button.logout-btn:hover { background: #b91c1c; }
+    .alert {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .alert.error {
+      display: block;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .alert.success {
+      display: block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .welcome-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .welcome-box p { margin: 6px 0; font-size: 0.92rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="auth-section">
+      <div class="tabs">
+        <button id="login-tab" class="tab-btn active" type="button">Login</button>
+        <button id="signup-tab" class="tab-btn" type="button">Sign Up</button>
+      </div>
+
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required placeholder="alex@test.com" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required placeholder="••••••••" />
+        </div>
+        <button class="submit-btn" type="submit">Log In</button>
+      </form>
+
+      <form id="signup-form" class="hidden">
+        <div class="field">
+          <label for="signup-username">Username</label>
+          <input id="signup-username" type="text" required placeholder="alex" />
+        </div>
+        <div class="field">
+          <label for="signup-email">Email</label>
+          <input id="signup-email" type="email" required placeholder="alex@test.com" />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" required placeholder="At least 6 characters" />
+        </div>
+        <button class="submit-btn" type="submit">Create Account</button>
+      </form>
+
+      <div id="auth-alert" class="alert"></div>
+    </div>
+
+    <div id="welcome-section" class="hidden">
+      <h2 id="welcome-heading" style="margin-top: 0;">Welcome</h2>
+      <div class="welcome-box">
+        <p><strong>User ID:</strong> <span id="user-id"></span></p>
+        <p><strong>Username:</strong> <span id="user-name"></span></p>
+        <p><strong>Email:</strong> <span id="user-email"></span></p>
+      </div>
+      <button id="logout-btn" class="logout-btn" type="button">Log Out</button>
+      <div id="welcome-alert" class="alert"></div>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script>
+    const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) || 'http://localhost:5000';
+
+    const authSection = document.getElementById('auth-section');
+    const welcomeSection = document.getElementById('welcome-section');
+    const loginTab = document.getElementById('login-tab');
+    const signupTab = document.getElementById('signup-tab');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const authAlert = document.getElementById('auth-alert');
+    const welcomeAlert = document.getElementById('welcome-alert');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    function showAlert(el, message, type = 'error') {
+      el.textContent = message;
+      el.className = `alert ${type}`;
+    }
+
+    function clearAlert(el) {
+      el.textContent = '';
+      el.className = 'alert';
+    }
+
+    function switchTab(mode) {
+      clearAlert(authAlert);
+      if (mode === 'login') {
+        loginTab.classList.add('active');
+        signupTab.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+      } else {
+        signupTab.classList.add('active');
+        loginTab.classList.remove('active');
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    loginTab.addEventListener('click', () => switchTab('login'));
+    signupTab.addEventListener('click', () => switchTab('signup'));
+
+    async function loadWelcome() {
+      const res = await fetch(`${API_URL}/api/welcome`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        authSection.classList.remove('hidden');
+        welcomeSection.classList.add('hidden');
+        return;
+      }
+
+      const data = await res.json();
+      authSection.classList.add('hidden');
+      welcomeSection.classList.remove('hidden');
+      clearAlert(welcomeAlert);
+
+      document.getElementById('welcome-heading').textContent = data.message || 'Welcome!';
+      document.getElementById('user-id').textContent = data.user.id;
+      document.getElementById('user-name').textContent = data.user.username;
+      document.getElementById('user-email').textContent = data.user.email;
+    }
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert(authAlert);
+
+      const username = document.getElementById('signup-username').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+
+      try {
+        const res = await fetch(`${API_URL}/api/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return showAlert(authAlert, data.message || 'Sign up failed.', 'error');
+        }
+
+        signupForm.reset();
+        switchTab('login');
+        document.getElementById('login-email').value = email;
+        showAlert(authAlert, 'Account created! Please log in.', 'success');
+      } catch (err) {
+        showAlert(authAlert, 'Unable to reach API server.', 'error');
+      }
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert(authAlert);
+
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return showAlert(authAlert, data.message || 'Login failed.', 'error');
+        }
+
+        loginForm.reset();
+        await loadWelcome();
+      } catch (err) {
+        showAlert(authAlert, 'Unable to reach API server.', 'error');
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      clearAlert(welcomeAlert);
+      try {
+        const res = await fetch(`${API_URL}/api/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return showAlert(welcomeAlert, data.message || 'Logout failed.', 'error');
+        }
+
+        welcomeSection.classList.add('hidden');
+        authSection.classList.remove('hidden');
+        switchTab('login');
+        showAlert(authAlert, data.message || 'Logged out successfully.', 'success');
+      } catch (err) {
+        showAlert(welcomeAlert, 'Unable to reach API server.', 'error');
+      }
+    });
+
+    loadWelcome();
+  </script>
+</body>
+</html>
